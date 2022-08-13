@@ -19,7 +19,7 @@ The URL to the same livestream: https://s58.ipcamlive.com/streams/3akqs3fdbty5qm
 python live_stream_handler.py -d -u https://s58.ipcamlive.com/streams/3akqs3fdbty5qmgvu/stream.m3u8
 ```
 
-<img src="src/captured.png" height="75%" width="75%">
+<img src="captured.png" height="75%" width="75%">
 
 ### Example For Taking Screenshots
 
