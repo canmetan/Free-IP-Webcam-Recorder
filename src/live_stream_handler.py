@@ -17,6 +17,7 @@ import cv2
 import os
 import logging
 import threading
+import sys
 from pathlib import Path
 from datetime import datetime
 from collections import deque
@@ -40,28 +41,27 @@ class VideoStreamCapture:
         """
         # Setting up the video stream
         self.stream_url = stream_url
-        self.verbose = verbose
-        self.micro_sleep_time: float = micro_sleep_time
-        self.max_sequential_fail_attempts: int = max_sequential_fail_attempts
         self.video_capture = cv2.VideoCapture(stream_url)
+        self.max_sequential_fail_attempts: int = max_sequential_fail_attempts
         self.frames: deque = deque(maxlen=buffer_size)
+        self.micro_sleep_time: float = micro_sleep_time
         self.keep_querying = True  # Making this false will stop the requests
+        self.verbose = verbose
 
         # Create a directory to save the files to.
         if not target_folder_path or target_folder_path == '':
             target_folder_path = os.path.join(os.getcwd(), f'capture_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}')
             self.target_folder_path = target_folder_path
 
-    def query_frames(self):
+    def _query_frame(self):
         """
-        Takes frames from the web stream.
-
-        :return: Nothing
+        :return: A single frame
         """
         # Local variables
         num_failed_attempts: int = 0
+        frame = None
 
-        while self.keep_querying and num_failed_attempts < self.max_sequential_fail_attempts:
+        while num_failed_attempts < self.max_sequential_fail_attempts:
             _, frame = self.video_capture.read()
 
             # Check for a frame from the stream.
@@ -70,14 +70,30 @@ class VideoStreamCapture:
                 # This is necessary not to hog the network nor the CPU
                 time.sleep(self.micro_sleep_time)
                 continue
+            # Frame retrieval successful
+            return frame
 
-            # We have a valid frame here...
-            num_failed_attempts = 0
+        # Max attempts were reached.
+        raise IOError('No output from the stream. Ran out of maximum number of attempts.')
+
+    def _query_frames(self):
+        """
+        Takes frames from the web stream.
+
+        :return: Nothing
+        """
+
+        while self.keep_querying:
+            try:
+                frame = self._query_frame()
+                assert (frame is not None)
+            except (IOError, AssertionError) as err:
+                logging.error(str(err))
+                sys.exit(1)
+
             self.frames.append(frame)
 
         logging.info('Querying has just finished.')
-        if num_failed_attempts < self.max_sequential_fail_attempts:
-            logging.warning('No output from the stream. Ran out of maximum number of attempts.')
 
         self.video_capture.release()
 
@@ -85,7 +101,7 @@ class VideoStreamCapture:
         # This will terminate the query_frames function.
         self.keep_querying = False
 
-    def get_frame(self, pop_right=False):
+    def get_frame_from_deque(self, pop_right=False):
         """
         Fetches frames from the dequeue.
 
@@ -104,48 +120,34 @@ class VideoStreamCapture:
             # Dequeue is empty...
             return None
 
-    def show_live_stream_video(self, frames_per_second: int = 0):
+    def show_live_stream_video(self):
         """
         Use this function if you want to only display the video stream.
 
-        :param frames_per_second: Play around with this parameter for a specific stream.
-        For frames_per_second <= 0 all frames will be flushed to the screen.
-        :param max_fail_attempts:
         :return:
         """
-        # First setup the console logger....
         setup_logger()
+        # First setup the console logger....
 
         logging.info(f'Starting to capture stream from: {self.stream_url}')
-        reader_thread = threading.Thread(target=self.query_frames, daemon=True,
-                                         args=())
-        reader_thread.start()
-
-        # Load up the buffer for 2 seconds....
-        time.sleep(1)
-
-        # If the frame rate is specified, this is the sleep time in between. Otherwise just flush it out.
-        if frames_per_second > 0:
-            wait_time_for_frame_rate: float = 1.0 / frames_per_second
-        else:
-            wait_time_for_frame_rate: float = 0.0
 
         # Now display the image
         while True:
-            frame = self.get_frame()
-            if frame is None:
-                # Only wait 0.01 seconds if there are currently no frames. Needed for fast computers / slow internet
-                time.sleep(self.micro_sleep_time)
-            else:
-                cv2.imshow('frame', frame)
-                time.sleep(wait_time_for_frame_rate)
+            try:
+                frame = self._query_frame()
+                assert (frame is not None)
+            except (IOError, AssertionError) as err:
+                logging.error(str(err))
+                sys.exit(1)
+
+            cv2.imshow('frame', frame)
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
         self.signal_stop_querying()
 
     def record_live_stream_to_folder(self,
-                                     interval_in_seconds: int,
+                                     interval_in_seconds: float,
                                      max_num_images: int):
         # First, setup the output folder and the logger....
         Path.mkdir(Path(self.target_folder_path), exist_ok=True)
@@ -164,13 +166,12 @@ class VideoStreamCapture:
 
         # Start the stream
         logging.info(f'Starting to capture stream from: {self.stream_url}')
-        reader_thread = threading.Thread(target=self.query_frames, daemon=True,
-                                         args=())
+        reader_thread = threading.Thread(target=self._query_frames, daemon=True, args=())
         reader_thread.start()
 
         # Either do it infinitely or until max num images are saved
         while num_images_saved < max_num_images or max_num_images == -1:
-            frame = self.get_frame()
+            frame = self.get_frame_from_deque()
             image_path: str = os.path.join(self.target_folder_path,
                                            f'{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.png')
             if frame is None:
@@ -203,9 +204,6 @@ if __name__ == '__main__':
                              '"https://s82.ipcamlive.com/streams/52m18dihyryxpvwv7/stream.m3u8"')
     parser.add_argument('-d', '--display_only', help='Only displays the stream and does not record it.',
                         action='store_true')
-    parser.add_argument('-f', '--display_frames_per_second', default=0, type=int,
-                        help='Only used for the "display only" setting. Frames per second for the stream. '
-                             'Otherwise it will just be flushed onto the screen (with default option 0).')
     parser.add_argument('-b', '--buffer_size', type=int, default=600,
                         help='Size of the buffer to store the number of frames. The bigger this is the smoother '
                              'stream will be...')
@@ -228,7 +226,7 @@ if __name__ == '__main__':
 
     # If it is a display only thing do not record anything.
     if args.display_only:
-        vsc.show_live_stream_video(frames_per_second=args.display_frames_per_second)
+        vsc.show_live_stream_video()
     else:
         vsc.record_live_stream_to_folder(interval_in_seconds=args.screenshot_interval_in_seconds,
                                          max_num_images=args.max_num_images)
