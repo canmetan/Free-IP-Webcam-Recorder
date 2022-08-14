@@ -24,21 +24,23 @@ python live_stream_handler.py -d -u https://s58.ipcamlive.com/streams/3akqs3fdbt
 ### Example For Taking Screenshots
 
 ```
-python live_stream_handler.py -d -u <url_to_stream> 
+python live_stream_handler.py -u <url_to_stream> -i 5 -m 200 
+```
+Captures a screenshot every 5 seconds and stops after capturing 200 images.
+
+## For usage, use the help option:
 
 ```
-
-## For usage use the help option:
-
-```
-python live_stream_handler.py [options]
+python live_stream_handler.py -h
 ```
 
 ```
-optional arguments:
+usage: python live_stream_handler.py [options]
+
+Live stream handler to display or record IP webcams.
+
   -h, --help            show this help message and exit
-  -u URL [URL ...], --url URL [URL ...]
-                        Stream URL or IP address. Default: "https://s82.ipcamlive.com/streams/52m18dihyryxpvwv7/stream.m3u8"
+  -u URL, --url URL     Stream URL or IP address.
   -d, --display_only    Only displays the stream and does not record it.
   -b BUFFER_SIZE, --buffer_size BUFFER_SIZE
                         Size of the buffer to store the number of frames. The bigger this is the smoother stream will be...
@@ -49,7 +51,6 @@ optional arguments:
                         Waits this many seconds until capturing another screenshot. Default: 60
   -m [MAX_NUM_IMAGES], --max_num_images [MAX_NUM_IMAGES]
                         Stops after capturing this many images. If nothing is passed or -1 is passed, does not stop.
-
 ```
 
 Apache License 2.0

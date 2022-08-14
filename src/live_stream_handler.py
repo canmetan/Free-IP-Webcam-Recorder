@@ -198,10 +198,7 @@ class VideoStreamCapture:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Live stream handler to display or record IP webcams.',
                                      prog='live_stream_handler', usage='python %(prog)s.py [options]')
-    parser.add_argument('-u', '--url', type=str, nargs='+',
-                        default='https://s82.ipcamlive.com/streams/52m18dihyryxpvwv7/stream.m3u8',
-                        help='Stream URL or IP address. Default: '
-                             '"https://s82.ipcamlive.com/streams/52m18dihyryxpvwv7/stream.m3u8"')
+    parser.add_argument('-u', '--url', type=str, required=True, help='Stream URL or IP address.')
     parser.add_argument('-d', '--display_only', help='Only displays the stream and does not record it.',
                         action='store_true')
     parser.add_argument('-b', '--buffer_size', type=int, default=600,
