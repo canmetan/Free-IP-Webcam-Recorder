@@ -13,7 +13,6 @@
 # limitations under the License.
 import time
 import argparse
-import cv2
 import os
 import logging
 import threading
@@ -21,6 +20,7 @@ import sys
 from pathlib import Path
 from datetime import datetime
 from collections import deque
+import cv2
 
 from logging_util import setup_logger
 
@@ -218,7 +218,7 @@ if __name__ == '__main__':
 
     # TODO: check valid URL
     vsc: VideoStreamCapture = VideoStreamCapture(
-        stream_url=args.url[0], target_folder_path=args.target_folder,
+        stream_url=args.url, target_folder_path=args.target_folder,
         buffer_size=args.buffer_size, verbose=not args.quiet)
 
     # If it is a display only thing do not record anything.
