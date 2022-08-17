@@ -1,4 +1,4 @@
-:: Copyright Can Metan
+:: Copyright Can Metan, Murat Tahtali
 
 :: Licensed under the Apache License, Version 2.0 (the "License");
 :: you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 :: limitations under the License.
 
 python3 -m venv live_stream_venv
-pip3 install --upgrade pip
-/live_stream_venv/bin/activate
+call .\live_stream_venv\Scripts\activate
+echo If python3 command does not work use the command "python"
+python3 -m pip install --upgrade pip
 python3 -m pip install -r requirements.txt
-

@@ -50,7 +50,7 @@ class VideoStreamCapture:
 
         # Create a directory to save the files to.
         if not target_folder_path or target_folder_path == '':
-            target_folder_path = os.path.join(os.getcwd(), f'capture_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}')
+            target_folder_path = os.path.join(os.getcwd(), f'capture_{datetime.now().strftime("%Y-%m-%d-%H_%M_%S")}')
             self.target_folder_path = target_folder_path
 
     def _query_frame(self):
